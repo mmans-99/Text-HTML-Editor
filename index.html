@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" id="theme-color-meta" content="#0f172a">
     <title>Android TXT/HTML Editor</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" type="image/png" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
 /* ===== Offline replacement for Tailwind CDN (only the classes this app uses) ===== */
 *,::before,::after{box-sizing:border-box;border:0 solid #e2e8f0}
@@ -693,6 +698,13 @@ svg{display:block}
                 const t = setInterval(() => { if (apply() || ++tries > 20) clearInterval(t); }, 500);
             }
         })();
+
+        // Register the service worker so the app works offline once installed (needs https, e.g. GitHub Pages)
+        if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js').catch(() => {});
+            });
+        }
     </script>
 </body>
 </html>
