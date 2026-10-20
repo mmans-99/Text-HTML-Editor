@@ -85,6 +85,29 @@ svg{display:block}
 #body-container.bg-slate-100 #editor-textarea{color:#1e293b}
 #body-container.bg-slate-100 #line-numbers{background:rgba(226,232,240,.9)}
 /* ===== end offline CSS ===== */
+
+/* ===== Save / Files panels ===== */
+.overlay{position:fixed;top:0;right:0;bottom:0;left:0;z-index:40;display:flex;align-items:flex-end;justify-content:center;background:rgba(2,6,23,.7);padding-bottom:env(safe-area-inset-bottom)}
+.sheet{width:100%;max-width:28rem;max-height:85%;overflow-y:auto;background:#1e293b;border:1px solid #334155;border-radius:1rem 1rem 0 0;padding:1rem;color:#f1f5f9;-webkit-user-select:text;user-select:text}
+.sheet h2{margin:0 0 .75rem;font-size:1.05rem;font-weight:700}
+.sheet .lbl{font-size:.75rem;color:#94a3b8;margin-bottom:.25rem}
+.name-row{display:flex;align-items:center;gap:.5rem}
+.name-row input{flex:1;min-width:0;background:#0f172a;border:1px solid #475569;border-radius:.5rem;padding:.55rem .7rem;color:#f1f5f9;font-size:.95rem;outline:none}
+.name-row input:focus{box-shadow:0 0 0 2px #a855f7}
+.name-row .ext{font-family:ui-monospace,Menlo,Consolas,monospace;color:#cbd5e1;font-size:.95rem}
+.btn{display:block;width:100%;margin-top:.5rem;padding:.65rem;border-radius:.6rem;background:#334155;color:#f1f5f9;font-weight:500;font-size:.9rem;text-align:center}
+.btn.primary{background:#9333ea}
+.btn.ghost{background:transparent;color:#94a3b8}
+.btn.small{display:inline-block;width:auto;margin:0 0 0 .3rem;padding:.35rem .65rem;font-size:.75rem}
+.btn.danger{background:#7f1d1d}
+.hint{margin:.75rem 0 0;font-size:.75rem;line-height:1.4;color:#94a3b8}
+.file-row{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.6rem 0;border-bottom:1px solid #334155}
+.file-info{min-width:0}
+.file-name{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-meta{font-size:.7rem;color:#94a3b8}
+.file-actions{flex-shrink:0;display:flex}
+/* ===== end Save / Files panels ===== */
+
 </style>
     <style>
         :root {
@@ -175,6 +198,11 @@ svg{display:block}
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
             </button>
 
+            <!-- Saved Files -->
+            <button id="files-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 active:scale-95 transition" title="Saved files">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+
             <!-- Open File -->
             <label class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer active:scale-95 transition" title="Open File">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
@@ -261,6 +289,28 @@ svg{display:block}
         <div class="text-[10px] text-slate-500">MOBILE CODE EDITOR</div>
     </footer>
 
+    <!-- Save Dialog -->
+    <div id="save-modal" class="overlay hidden">
+        <div class="sheet">
+            <h2>Save file</h2>
+            <div class="lbl">File name</div>
+            <div class="name-row"><input id="save-name" type="text" autocomplete="off" autocapitalize="off" spellcheck="false"><span id="save-ext" class="ext">.html</span></div>
+            <button id="save-app-btn" class="btn primary">Save in app (works offline)</button>
+            <button id="export-btn" class="btn">Export to phone storage...</button>
+            <button class="btn ghost" data-close="save-modal">Cancel</button>
+            <p class="hint">"Save in app" keeps the file inside this app and always works. "Export" tries to put a real file on your phone (save dialog, share sheet or download, depending on your device).</p>
+        </div>
+    </div>
+
+    <!-- Saved Files Dialog -->
+    <div id="files-modal" class="overlay hidden">
+        <div class="sheet">
+            <h2>Saved files</h2>
+            <div id="files-list"></div>
+            <button class="btn ghost" data-close="files-modal">Close</button>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-2 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-opacity duration-300 z-50 text-sm font-medium">
         Saved!
@@ -292,7 +342,7 @@ svg{display:block}
         let currentFontSize = 14;
         let isDarkMode = true;
 
-        editor.value = "";
+        try { editor.value = localStorage.getItem('mobile_editor_content') || ""; } catch (_) { editor.value = ""; }
 
         function updateLineNumbers() {
             const lines = editor.value.split('\n').length;
@@ -416,18 +466,96 @@ svg{display:block}
             });
         });
 
-        saveBtn.addEventListener('click', () => {
-            const ext = extensionSelect.value;
-            const filename = `document.${ext}`;
-            const mimeTypes = {
-                'html': 'text/html',
-                'txt': 'text/plain',
-                'css': 'text/css',
-                'js': 'application/javascript',
-                'json': 'application/json'
-            };
-            
-            const blob = new Blob([editor.value], { type: mimeTypes[ext] || 'text/plain' });
+        // ===== Saving & saved-files library =====
+        const FILES_KEY = 'mobile_editor_files';
+        const mimeTypes = {
+            'html': 'text/html',
+            'txt': 'text/plain',
+            'css': 'text/css',
+            'js': 'application/javascript',
+            'json': 'application/json'
+        };
+        let currentName = 'document';
+
+        function loadFiles() {
+            try { return JSON.parse(localStorage.getItem(FILES_KEY)) || []; } catch (_) { return []; }
+        }
+        function storeFiles(list) {
+            try { localStorage.setItem(FILES_KEY, JSON.stringify(list)); return true; } catch (_) { return false; }
+        }
+        function cleanName(n) {
+            return (n || '').replace(/[\\\/:*?"<>|]/g, '_').trim() || 'document';
+        }
+        function setCurrentName(full) {
+            const i = full.lastIndexOf('.');
+            const base = i > 0 ? full.slice(0, i) : full;
+            const ext = i > 0 ? full.slice(i + 1).toLowerCase() : '';
+            currentName = cleanName(base);
+            if (Array.from(extensionSelect.options).some(o => o.value === ext)) extensionSelect.value = ext;
+        }
+        function showModal(id) { document.getElementById(id).classList.remove('hidden'); }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+        document.querySelectorAll('[data-close]').forEach(btn => {
+            btn.addEventListener('click', () => closeModal(btn.dataset.close));
+        });
+        document.querySelectorAll('.overlay').forEach(ov => {
+            ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.add('hidden'); });
+        });
+
+        const saveNameInput = document.getElementById('save-name');
+
+        function openSaveModal() {
+            saveNameInput.value = currentName;
+            document.getElementById('save-ext').innerText = '.' + extensionSelect.value;
+            showModal('save-modal');
+        }
+        saveBtn.addEventListener('click', openSaveModal);
+
+        function currentFullName() {
+            currentName = cleanName(saveNameInput.value);
+            return currentName + '.' + extensionSelect.value;
+        }
+
+        document.getElementById('save-app-btn').addEventListener('click', () => {
+            const filename = currentFullName();
+            const list = loadFiles();
+            const entry = { name: filename, content: editor.value, updated: Date.now() };
+            const idx = list.findIndex(f => f.name === filename);
+            if (idx >= 0) list[idx] = entry; else list.push(entry);
+            if (storeFiles(list)) {
+                closeModal('save-modal');
+                showToast('Saved ' + filename + ' in app');
+            } else {
+                showToast('Storage full - use Export instead');
+            }
+        });
+
+        async function exportFile(filename, text) {
+            const ext = filename.split('.').pop().toLowerCase();
+            const mime = mimeTypes[ext] || 'text/plain';
+            const blob = new Blob([text], { type: mime });
+            // 1) Native save dialog (desktop Chrome and some browsers)
+            try {
+                if (window.showSaveFilePicker) {
+                    const handle = await window.showSaveFilePicker({ suggestedName: filename });
+                    const w = await handle.createWritable();
+                    await w.write(blob);
+                    await w.close();
+                    showToast('Saved ' + filename);
+                    return;
+                }
+            } catch (err) { if (err && err.name === 'AbortError') return; }
+            // 2) Android share sheet (lets you pick Files / Drive / etc.)
+            try {
+                const file = new File([blob], filename, { type: mime });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: filename });
+                    showToast('Shared ' + filename);
+                    return;
+                }
+            } catch (err) { if (err && err.name === 'AbortError') return; }
+            // 3) Classic download link
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -436,7 +564,86 @@ svg{display:block}
             a.click();
             document.body.removeChild(a);
             setTimeout(() => URL.revokeObjectURL(url), 1000);
-            showToast(`Saved ${filename}`);
+            showToast('Download started: ' + filename + ' (if nothing appears, use Save in app)');
+        }
+
+        document.getElementById('export-btn').addEventListener('click', () => {
+            const filename = currentFullName();
+            closeModal('save-modal');
+            exportFile(filename, editor.value);
+        });
+
+        const filesList = document.getElementById('files-list');
+
+        function renderFiles() {
+            const list = loadFiles().sort((x, y) => y.updated - x.updated);
+            filesList.innerHTML = '';
+            if (!list.length) {
+                const p = document.createElement('p');
+                p.className = 'hint';
+                p.innerText = 'No saved files yet. Tap Save, then "Save in app".';
+                filesList.appendChild(p);
+                return;
+            }
+            list.forEach(f => {
+                const row = document.createElement('div');
+                row.className = 'file-row';
+                const info = document.createElement('div');
+                info.className = 'file-info';
+                const nm = document.createElement('div');
+                nm.className = 'file-name';
+                nm.innerText = f.name;
+                const meta = document.createElement('div');
+                meta.className = 'file-meta';
+                meta.innerText = f.content.length + ' chars - ' + new Date(f.updated).toLocaleString();
+                info.appendChild(nm);
+                info.appendChild(meta);
+                const actions = document.createElement('div');
+                actions.className = 'file-actions';
+                [['Open', 'btn small primary'], ['Export', 'btn small'], ['Delete', 'btn small danger']].forEach(([label, cls]) => {
+                    const b = document.createElement('button');
+                    b.className = cls;
+                    b.innerText = label;
+                    b.addEventListener('click', () => fileAction(label, f.name, b));
+                    actions.appendChild(b);
+                });
+                row.appendChild(info);
+                row.appendChild(actions);
+                filesList.appendChild(row);
+            });
+        }
+
+        function fileAction(action, name, btn) {
+            const list = loadFiles();
+            const f = list.find(x => x.name === name);
+            if (!f) return;
+            if (action === 'Open') {
+                editor.value = f.content;
+                setCurrentName(f.name);
+                updateLineNumbers();
+                updateCursor();
+                saveToLocalStorage();
+                closeModal('files-modal');
+                tabEditor.click();
+                showToast('Opened ' + f.name);
+            } else if (action === 'Export') {
+                exportFile(f.name, f.content);
+            } else if (action === 'Delete') {
+                if (btn.dataset.armed !== '1') {
+                    btn.dataset.armed = '1';
+                    btn.innerText = 'Sure?';
+                    setTimeout(() => { btn.dataset.armed = ''; btn.innerText = 'Delete'; }, 2500);
+                    return;
+                }
+                storeFiles(list.filter(x => x.name !== name));
+                renderFiles();
+                showToast('Deleted ' + name);
+            }
+        }
+
+        document.getElementById('files-btn').addEventListener('click', () => {
+            renderFiles();
+            showModal('files-modal');
         });
 
         document.getElementById('file-input').addEventListener('change', (e) => {
@@ -447,13 +654,14 @@ svg{display:block}
                 editor.value = e.target.result;
                 updateLineNumbers();
                 updateCursor();
+                setCurrentName(file.name);
                 showToast(`Opened ${file.name}`);
             };
             reader.readAsText(file);
         });
 
         function saveToLocalStorage() {
-            localStorage.setItem('mobile_editor_content', editor.value);
+            try { localStorage.setItem('mobile_editor_content', editor.value); } catch (_) {}
         }
 
         function showToast(msg) {
@@ -466,6 +674,7 @@ svg{display:block}
         }
 
         updateLineNumbers();
+        updateCursor();
     </script>
 </body>
 </html>
