@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full w-full overflow-hidden">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Mobile Text & HTML Editor</title>
+    
+    <!-- Web App Manifest for Android Installation -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk1vYmlsZSBUZXh0ICYgSFRNTCBFZGl0b3IiLAogICJzaG9ydF9uYW1lIjogIkhUTUwgRWRpdG9yIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMmExMTYiLAogICJ0aGVtZV9jb2xvciI6ICIjNjc1MGE0IiwKICAiaWNvbnMiOiBbXQp9">
+    <meta name="theme-color" content="#6750a4">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts & Material Symbols -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Roboto', 'sans-serif'],
+                        mono: ['Fira Code', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Exact metrics and responsive heights */
+        :root {
+            --app-height: 100vh;
+            --editor-font-size: 14px;
+            --editor-line-height: 20px;
+            --editor-padding: 8px;
+        }
+
+        @supports (height: 100dvh) {
+            :root {
+                --app-height: 100dvh;
+            }
+        }
+
+        html, body {
+            height: var(--app-height);
+            max-height: var(--app-height);
+            width: 100vw;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top, 0px);
+        }
+
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        /* Unified scroll viewport */
+        .editor-viewport {
+            display: flex;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Line Numbers Column: Exact font and line-height metrics */
+        .line-numbers-col {
+            user-select: none;
+            text-align: right;
+            padding-top: var(--editor-padding);
+            padding-bottom: var(--editor-padding);
+            padding-left: 4px;
+            padding-right: 8px;
+            color: #9ca3af;
+            font-family: 'Fira Code', monospace;
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            white-space: pre;
+            background-color: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            box-sizing: border-box;
+            min-width: 3.25rem;
+            flex-shrink: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        .dark .line-numbers-col {
+            background-color: #0f172a;
+            border-right-color: #334155;
+            color: #64748b;
+        }
+
+        /* Textarea: Matches Line Numbers metrics strictly */
+        .editor-textarea {
+            flex: 1;
+            resize: none;
+            outline: none;
+            border: none;
+            background: transparent;
+            font-family: 'Fira Code', monospace;
+            font-size: var(--editor-font-size);
+            line-height: var(--editor-line-height);
+            tab-size: 2;
+            box-sizing: border-box;
+            padding: var(--editor-padding);
+            margin: 0;
+            height: 100%;
+            width: 100%;
+            overflow: auto;
+        }
+
+        .no-wrap {
+            white-space: pre !important;
+            word-break: normal !important;
+            overflow-x: auto !important;
+        }
+
+        .wrap-text {
+            white-space: pre-wrap !important;
+            word-break: break-word !important;
+        }
+
+        /* Custom Scrollbars */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 9999px;
+        }
+        .dark .custom-scroll::-webkit-scrollbar-thumb {
+            background: rgba(71, 85, 105, 0.5);
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="h-full w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 selection:bg-purple-300 dark:selection:bg-purple-800">
+
+    <!-- Header Bar -->
+    <header class="safe-area-top bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 py-2 flex items-center justify-between shadow-xs z-30 shrink-0">
+        <div class="flex items-center space-x-2 min-w-0 flex-1">
+            <span class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl shrink-0">edit_note</span>
+            <div class="min-w-0 flex-1 pr-2">
+                <input type="text" id="filename-input" value="untitled.html" class="w-full font-bold text-sm bg-transparent border-b border-transparent hover:border-slate-300 focus:border-purple-600 focus:outline-none px-1 rounded transition truncate" title="Tap to rename file">
+                <span id="file-status" class="text-[10px] block text-emerald-600 dark:text-emerald-400 font-medium px-1 truncate">Ready</span>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-1 shrink-0">
+            <!-- File Format Extension Selector -->
+            <select id="format-selector" onchange="onFormatChange()" class="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 outline-none cursor-pointer">
+                <option value="html">.HTML</option>
+                <option value="txt">.TXT</option>
+                <option value="css">.CSS</option>
+                <option value="js">.JS</option>
+                <option value="json">.JSON</option>
+            </select>
+
+            <!-- Theme Toggle -->
+            <button id="theme-btn" onclick="toggleTheme()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Toggle Dark/Light Mode">
+                <span class="material-symbols-outlined text-xl block dark:hidden">dark_mode</span>
+                <span class="material-symbols-outlined text-xl hidden dark:block">light_mode</span>
+            </button>
+
+            <!-- Copy All Button -->
+            <button onclick="copyToClipboard()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Copy All Code">
+                <span class="material-symbols-outlined text-xl">content_copy</span>
+            </button>
+
+            <!-- New File Button -->
+            <button onclick="createNewFile()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="New Document">
+                <span class="material-symbols-outlined text-xl">note_add</span>
+            </button>
+
+            <!-- Open File Button -->
+            <button onclick="openFile()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Open Local File">
+                <span class="material-symbols-outlined text-xl">folder_open</span>
+            </button>
+
+            <!-- Save File Button -->
+            <button onclick="saveFile()" class="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-full shadow text-xs sm:text-sm font-medium transition active:scale-95">
+                <span class="material-symbols-outlined text-base sm:text-lg">download</span>
+                <span class="inline">Save</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Hidden File Input for Opening Local Files -->
+    <input type="file" id="file-input" class="hidden" accept=".html,.htm,.txt,.css,.js,.json" onchange="handleFileSelect(event)">
+
+    <!-- Editor Mode & Font Controls -->
+    <div class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 px-3 py-1.5 flex items-center justify-between text-xs font-medium shrink-0">
+        <!-- Tab Mode Controls -->
+        <div class="flex space-x-1 bg-slate-200 dark:bg-slate-700 p-0.5 rounded-lg">
+            <button id="tab-edit" onclick="switchTab('edit')" class="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">code</span> Editor
+            </button>
+            <button id="tab-preview" onclick="switchTab('preview')" class="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1">
+                <span class="material-symbols-outlined text-sm">visibility</span> Preview
+            </button>
+            <button id="tab-split" onclick="switchTab('split')" class="hidden md:flex px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition items-center gap-1">
+                <span class="material-symbols-outlined text-sm">vertical_split</span> Split
+            </button>
+        </div>
+
+        <!-- Word Wrap & Font Size Adjustments -->
+        <div class="flex items-center space-x-2">
+            <button id="wrap-btn" onclick="toggleWordWrap()" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 font-mono text-[11px] flex items-center gap-1" title="Toggle Word Wrap">
+                <span class="material-symbols-outlined text-xs">wrap_text</span>
+                <span id="wrap-status">No Wrap</span>
+            </button>
+
+            <div class="flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg px-1.5 py-0.5">
+                <button onclick="changeFontSize(-1)" class="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-600 rounded active:scale-90">
+                    <span class="material-symbols-outlined text-xs">remove</span>
+                </button>
+                <span id="font-size-display" class="px-1.5 text-[11px] font-mono">14px</span>
+                <button onclick="changeFontSize(1)" class="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-600 rounded active:scale-90">
+                    <span class="material-symbols-outlined text-xs">add</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Symbol Touch Keyboard -->
+    <div id="quick-toolbar" class="bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 px-2 py-1 flex items-center gap-1 overflow-x-auto no-scrollbar text-xs shrink-0 select-none">
+        <button onclick="insertHTML5Boilerplate()" class="px-2.5 py-1 bg-purple-600 text-white rounded font-bold text-xs shrink-0 active:scale-95 shadow-xs" title="Insert HTML5 Starter Code">&lt;!&gt;</button>
+        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-1 shrink-0">Symbols:</span>
+        <button onclick="insertSymbol('<')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&lt;</button>
+        <button onclick="insertSymbol('>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&gt;</button>
+        <button onclick="insertSymbol('/')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">/</button>
+        <button onclick="insertSymbol('=')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">=</button>
+        <button onclick="insertSymbol('&quot;')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&quot;</button>
+        <button onclick="insertSymbol('\'')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">'</button>
+        <button onclick="insertSymbol('{', '}')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">{}</button>
+        <button onclick="insertSymbol('[', ']')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">[]</button>
+        <button onclick="insertSymbol('!')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">!</button>
+        
+        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-1 shrink-0 ml-1">Tags:</span>
+        <button onclick="insertSymbol('<div>', '</div>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-xs shrink-0">div</button>
+        <button onclick="insertSymbol('<p>', '</p>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-xs shrink-0">p</button>
+        <button onclick="insertSymbol('<style>\n', '\n</style>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-amber-600 dark:text-amber-400 text-xs shrink-0">style</button>
+        <button onclick="insertSymbol('<script>\n', '\n<\/script>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-sky-600 dark:text-sky-400 text-xs shrink-0">script</button>
+    </div>
+
+    <!-- Main Content Workspace -->
+    <main class="flex-1 w-full min-h-0 relative overflow-hidden flex flex-col md:flex-row bg-white dark:bg-slate-900">
+
+        <!-- Code Editor Section -->
+        <section id="editor-section" class="w-full h-full flex-1 flex flex-col overflow-hidden relative">
+            <div id="editor-viewport" class="editor-viewport custom-scroll">
+                <!-- Line Numbers Column -->
+                <div id="line-numbers" class="line-numbers-col">1</div>
+                <!-- Completely Empty Textarea -->
+                <textarea id="editor" spellcheck="false" autocomplete="off" auto-capitalize="off" class="editor-textarea no-wrap text-slate-800 dark:text-slate-100" placeholder="Type text or HTML code here..."></textarea>
+            </div>
+        </section>
+
+        <!-- Live HTML Preview Section -->
+        <section id="preview-section" class="w-full h-full flex-1 bg-slate-50 dark:bg-slate-950 hidden md:flex flex-col border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800">
+            <div class="bg-slate-200 dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 flex justify-between items-center select-none border-b border-slate-300 dark:border-slate-700 shrink-0">
+                <span class="flex items-center gap-1.5 font-medium">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
+                    Live HTML Render
+                </span>
+                
+                <button onclick="refreshPreview()" class="hover:text-purple-600 flex items-center gap-0.5 text-xs">
+                    <span class="material-symbols-outlined text-sm">refresh</span> Reload
+                </button>
+            </div>
+
+            <div id="iframe-wrapper" class="w-full flex-1 flex justify-center items-center overflow-auto p-0 transition-all bg-slate-200/50 dark:bg-slate-900/50">
+                <iframe id="preview-iframe" class="w-full h-full border-none bg-white shadow-sm" sandbox="allow-scripts allow-modals allow-forms"></iframe>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Status Bar -->
+    <footer class="safe-area-bottom bg-slate-100 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between select-none shrink-0">
+        <div class="flex items-center space-x-3">
+            <span id="cursor-pos">Ln 1, Col 1</span>
+            <span id="char-count">0 chars</span>
+        </div>
+        <div>
+            <span class="text-[10px] uppercase font-bold text-slate-400">Android TXT/HTML Editor</span>
+        </div>
+    </footer>
+
+    <!-- Toast Notification Banner -->
+    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-full shadow-lg text-xs font-medium transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('line-numbers');
+        const previewIframe = document.getElementById('preview-iframe');
+        const filenameInput = document.getElementById('filename-input');
+        const fileStatus = document.getElementById('file-status');
+        const editorSection = document.getElementById('editor-section');
+        const previewSection = document.getElementById('preview-section');
+        const cursorPos = document.getElementById('cursor-pos');
+        const charCount = document.getElementById('char-count');
+        const formatSelector = document.getElementById('format-selector');
+        const fontSizeDisplay = document.getElementById('font-size-display');
+        const wrapStatus = document.getElementById('wrap-status');
+
+        let fontSize = 14;
+        let isWordWrap = false;
+        let isModified = false;
+
+        const htmlBoilerplate = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+</body>
+</html>`;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            // Theme configuration
+            if (localStorage.getItem('editor_theme') === 'dark' || (!('editor_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+
+            // Textarea starts COMPLETELY BLANK
+            editor.value = '';
+            
+            updateEditorLines();
+            syncExtensionWithFilename();
+
+            // STRICT SYNCHRONIZED VERTICAL SCROLLING
+            editor.addEventListener('scroll', () => {
+                lineNumbers.scrollTop = editor.scrollTop;
+            });
+
+            // Input handlers
+            editor.addEventListener('input', () => {
+                isModified = true;
+                markUnsaved();
+                updateEditorLines();
+                debouncePreview();
+                saveToLocalStorage();
+            });
+
+            editor.addEventListener('keyup', updateCursorStats);
+            editor.addEventListener('click', updateCursorStats);
+
+            filenameInput.addEventListener('input', () => {
+                syncExtensionWithFilename();
+                localStorage.setItem('mobile_editor_filename', filenameInput.value);
+            });
+        });
+
+        // Exact line counting & wrapper alignment
+        function updateEditorLines() {
+            const lines = editor.value.split('\n');
+            const lineCount = lines.length;
+
+            if (!isWordWrap) {
+                lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
+            } else {
+                const computedStyle = window.getComputedStyle(editor);
+                const width = editor.clientWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
+                
+                const canvas = updateEditorLines.canvas || (updateEditorLines.canvas = document.createElement('canvas'));
+                const context = canvas.getContext('2d');
+                context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
+
+                let lineNumHTML = '';
+                lines.forEach((lineText, idx) => {
+                    lineNumHTML += (idx + 1) + '\n';
+                    if (lineText.length > 0 && width > 0) {
+                        const words = lineText.split('');
+                        let currentLine = '';
+                        let wrappedCount = 0;
+
+                        for (let n = 0; n < words.length; n++) {
+                            const testLine = currentLine + words[n];
+                            const metrics = context.measureText(testLine);
+                            if (metrics.width > width && n > 0) {
+                                currentLine = words[n];
+                                wrappedCount++;
+                            } else {
+                                currentLine = testLine;
+                            }
+                        }
+                        for (let w = 0; w < wrappedCount; w++) {
+                            lineNumHTML += '\n';
+                        }
+                    }
+                });
+                lineNumbers.innerHTML = lineNumHTML;
+            }
+
+            charCount.textContent = `${editor.value.length} chars`;
+        }
+
+        // Toggle Word Wrap
+        function toggleWordWrap() {
+            isWordWrap = !isWordWrap;
+            if (isWordWrap) {
+                editor.classList.remove('no-wrap');
+                editor.classList.add('wrap-text');
+                wrapStatus.textContent = 'Wrap On';
+            } else {
+                editor.classList.remove('wrap-text');
+                editor.classList.add('no-wrap');
+                wrapStatus.textContent = 'No Wrap';
+            }
+            updateEditorLines();
+        }
+
+        // Font Size Adjuster
+        function changeFontSize(delta) {
+            fontSize = Math.max(10, Math.min(28, fontSize + delta));
+            const lineHeight = Math.round(fontSize * 1.428);
+            document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
+            document.documentElement.style.setProperty('--editor-line-height', `${lineHeight}px`);
+            fontSizeDisplay.textContent = `${fontSize}px`;
+            updateEditorLines();
+        }
+
+        function updateCursorStats() {
+            const text = editor.value;
+            const pos = editor.selectionStart;
+            const lines = text.substring(0, pos).split('\n');
+            const lineNum = lines.length;
+            const colNum = lines[lines.length - 1].length + 1;
+            cursorPos.textContent = `Ln ${lineNum}, Col ${colNum}`;
+        }
+
+        function markUnsaved() {
+            fileStatus.textContent = 'Unsaved changes';
+            fileStatus.className = 'text-[10px] block text-amber-600 dark:text-amber-400 font-medium px-1 truncate';
+        }
+
+        function markSaved() {
+            isModified = false;
+            fileStatus.textContent = 'Saved to device';
+            fileStatus.className = 'text-[10px] block text-emerald-600 dark:text-emerald-400 font-medium px-1 truncate';
+        }
+
+        function syncExtensionWithFilename() {
+            const name = filenameInput.value.toLowerCase();
+            if (name.endsWith('.html') || name.endsWith('.htm')) formatSelector.value = 'html';
+            else if (name.endsWith('.txt')) formatSelector.value = 'txt';
+            else if (name.endsWith('.css')) formatSelector.value = 'css';
+            else if (name.endsWith('.js')) formatSelector.value = 'js';
+            else if (name.endsWith('.json')) formatSelector.value = 'json';
+        }
+
+        function onFormatChange() {
+            let baseName = filenameInput.value.replace(/\.[^/.]+$/, "");
+            if (!baseName) baseName = "untitled";
+            filenameInput.value = `${baseName}.${formatSelector.value}`;
+            localStorage.setItem('mobile_editor_filename', filenameInput.value);
+        }
+
+        // Live Preview Controls
+        let previewTimer;
+        function debouncePreview() {
+            clearTimeout(previewTimer);
+            previewTimer = setTimeout(updatePreview, 350);
+        }
+
+        function updatePreview() {
+            const code = editor.value;
+            const doc = previewIframe.contentWindow.document;
+            doc.open();
+            doc.write(code);
+            doc.close();
+        }
+
+        function refreshPreview() {
+            updatePreview();
+            showToast('Preview reloaded');
+        }
+
+        // View Mode Switcher
+        function switchTab(mode) {
+            const editBtn = document.getElementById('tab-edit');
+            const previewBtn = document.getElementById('tab-preview');
+            const splitBtn = document.getElementById('tab-split');
+
+            [editBtn, previewBtn, splitBtn].forEach(btn => {
+                if (btn) btn.className = 'px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1';
+            });
+
+            if (mode === 'edit') {
+                editBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
+                editorSection.classList.remove('hidden');
+                previewSection.classList.add('hidden');
+                previewSection.classList.remove('flex');
+            } else if (mode === 'preview') {
+                previewBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
+                editorSection.classList.add('hidden');
+                previewSection.classList.remove('hidden');
+                previewSection.classList.add('flex');
+                updatePreview();
+            } else if (mode === 'split') {
+                splitBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
+                editorSection.classList.remove('hidden');
+                previewSection.classList.remove('hidden');
+                previewSection.classList.add('flex');
+                updatePreview();
+            }
+        }
+
+        // Theme Switcher
+        function toggleTheme() {
+            if (document.documentElement.classList.contains('dark')) {
+                document.documentElement.classList.remove('dark');
+                localStorage.setItem('editor_theme', 'light');
+            } else {
+                document.documentElement.classList.add('dark');
+                localStorage.setItem('editor_theme', 'dark');
+            }
+        }
+
+        // Symbol Insertion
+        function insertSymbol(openSymbol, closeSymbol = '') {
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const text = editor.value;
+            const selectedText = text.substring(start, end);
+
+            const inserted = openSymbol + selectedText + closeSymbol;
+            editor.value = text.substring(0, start) + inserted + text.substring(end);
+            editor.focus();
+
+            const newPos = start + openSymbol.length + selectedText.length;
+            editor.setSelectionRange(newPos, newPos);
+
+            updateEditorLines();
+            debouncePreview();
+            markUnsaved();
+            saveToLocalStorage();
+        }
+
+        function insertHTML5Boilerplate() {
+            if (editor.value.trim().length > 0 && !confirm('Replace current editor text with HTML boilerplate?')) return;
+            editor.value = htmlBoilerplate;
+            filenameInput.value = 'index.html';
+            syncExtensionWithFilename();
+            updateEditorLines();
+            updatePreview();
+            markUnsaved();
+            saveToLocalStorage();
+            showToast('HTML Boilerplate Inserted');
+        }
+
+        function createNewFile() {
+            if (isModified && !confirm('Discard unsaved changes?')) return;
+            editor.value = '';
+            filenameInput.value = 'untitled.txt';
+            syncExtensionWithFilename();
+            updateEditorLines();
+            updatePreview();
+            markSaved();
+            saveToLocalStorage();
+            showToast('New blank file created');
+        }
+
+        function openFile() {
+            document.getElementById('file-input').click();
+        }
+
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                editor.value = e.target.result;
+                filenameInput.value = file.name;
+                syncExtensionWithFilename();
+                updateEditorLines();
+                updatePreview();
+                markSaved();
+                saveToLocalStorage();
+                showToast(`Opened ${file.name}`);
+            };
+            reader.readAsText(file);
+        }
+
+        // Clean Direct Download File Saving Mechanics
+        function saveFile() {
+            const content = editor.value;
+            let rawFilename = filenameInput.value.trim() || 'untitled';
+            const selectedExt = formatSelector.value;
+
+            // Enforce clean extension alignment
+            let baseName = rawFilename.replace(/\.[^/.]+$/, "");
+            if (!baseName) baseName = "untitled";
+            const finalFilename = `${baseName}.${selectedExt}`;
+            filenameInput.value = finalFilename;
+
+            const mimeTypes = {
+                'html': 'text/html;charset=utf-8',
+                'txt': 'text/plain;charset=utf-8',
+                'css': 'text/css;charset=utf-8',
+                'js': 'application/javascript;charset=utf-8',
+                'json': 'application/json;charset=utf-8'
+            };
+            const mimeType = mimeTypes[selectedExt] || 'text/plain;charset=utf-8';
+
+            // Direct blob download
+            try {
+                const blob = new Blob([content], { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = finalFilename;
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Safely revoke object URL without secondary prompts
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 1500);
+
+                markSaved();
+                showToast(`Saved ${finalFilename}`);
+            } catch (err) {
+                copyToClipboard();
+            }
+        }
+
+        function copyToClipboard() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(editor.value).then(() => {
+                    showToast('Copied content to clipboard');
+                }).catch(() => fallbackCopy());
+            } else {
+                fallbackCopy();
+            }
+        }
+
+        function fallbackCopy() {
+            editor.select();
+            document.execCommand('copy');
+            showToast('Copied content to clipboard');
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('mobile_editor_code', editor.value);
+            localStorage.setItem('mobile_editor_filename', filenameInput.value);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.textContent = message;
+            toast.classList.remove('opacity-0', 'pointer-events-none');
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'pointer-events-none');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
