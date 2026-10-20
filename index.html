@@ -5,7 +5,87 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" id="theme-color-meta" content="#0f172a">
     <title>Android TXT/HTML Editor</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+/* ===== Offline replacement for Tailwind CDN (only the classes this app uses) ===== */
+*,::before,::after{box-sizing:border-box;border:0 solid #e2e8f0}
+html{line-height:1.5;-webkit-text-size-adjust:100%;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+body{margin:0}
+button,select,textarea,input{font-family:inherit;font-size:100%;line-height:inherit;color:inherit;margin:0}
+button{background:transparent;padding:0;cursor:pointer}
+textarea{padding:0}
+svg{display:block}
+/* layout */
+.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1 1 0%}
+.items-center{align-items:center}.justify-between{justify-content:space-between}.justify-center{justify-content:center}
+.shrink-0{flex-shrink:0}.relative{position:relative}.absolute{position:absolute}.fixed{position:fixed}
+.inset-0{top:0;right:0;bottom:0;left:0}
+.bottom-12{bottom:3rem}.left-1\/2{left:50%}.z-50{z-index:50}
+.transform.-translate-x-1\/2{transform:translateX(-50%)}
+.overflow-hidden{overflow:hidden}.overflow-auto{overflow:auto}.overflow-x-auto{overflow-x:auto}
+.whitespace-nowrap{white-space:nowrap}
+.cursor-pointer{cursor:pointer}.pointer-events-none{pointer-events:none}
+.opacity-0{opacity:0}
+.w-full{width:100%}.h-full{height:100%}
+.h-\[var\(--app-height\)\]{height:var(--app-height)}
+.w-4{width:1rem}.h-4{height:1rem}.w-5{width:1.25rem}.h-5{height:1.25rem}
+/* spacing */
+.p-2{padding:.5rem}.p-3{padding:.75rem}.p-0\.5{padding:.125rem}
+.px-1{padding-left:.25rem;padding-right:.25rem}.px-1\.5{padding-left:.375rem;padding-right:.375rem}
+.px-2{padding-left:.5rem;padding-right:.5rem}.px-2\.5{padding-left:.625rem;padding-right:.625rem}
+.px-3{padding-left:.75rem;padding-right:.75rem}.px-3\.5{padding-left:.875rem;padding-right:.875rem}
+.px-4{padding-left:1rem;padding-right:1rem}
+.py-0\.5{padding-top:.125rem;padding-bottom:.125rem}.py-1{padding-top:.25rem;padding-bottom:.25rem}
+.py-1\.5{padding-top:.375rem;padding-bottom:.375rem}.py-2{padding-top:.5rem;padding-bottom:.5rem}
+.py-3{padding-top:.75rem;padding-bottom:.75rem}.pr-2{padding-right:.5rem}
+.space-x-1>*+*{margin-left:.25rem}.space-x-1\.5>*+*{margin-left:.375rem}.space-x-2>*+*{margin-left:.5rem}
+/* text */
+.text-xs{font-size:.75rem;line-height:1rem}.text-sm{font-size:.875rem;line-height:1.25rem}
+.text-\[10px\]{font-size:10px}
+.font-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+.font-medium{font-weight:500}.font-bold{font-weight:700}
+.text-right{text-align:right}.leading-relaxed{line-height:1.625}
+/* text colors */
+.text-white{color:#fff}
+.text-slate-100{color:#f1f5f9}.text-slate-200{color:#e2e8f0}.text-slate-300{color:#cbd5e1}
+.text-slate-400{color:#94a3b8}.text-slate-500{color:#64748b}.text-slate-600{color:#475569}
+.text-slate-700{color:#334155}.text-slate-800{color:#1e293b}
+.text-purple-200{color:#e9d5ff}
+/* backgrounds */
+.bg-white{background:#fff}.bg-transparent{background:transparent}
+.bg-slate-100{background:#f1f5f9}.bg-slate-200{background:#e2e8f0}.bg-slate-300{background:#cbd5e1}
+.bg-slate-700{background:#334155}.bg-slate-800{background:#1e293b}.bg-slate-900{background:#0f172a}
+.bg-slate-800\/80{background:rgba(30,41,59,.8)}.bg-slate-800\/90{background:rgba(30,41,59,.9)}
+.bg-slate-900\/90{background:rgba(15,23,42,.9)}
+.bg-purple-600{background:#9333ea}.bg-purple-700{background:#7e22ce}.bg-purple-900\/60{background:rgba(88,28,135,.6)}
+/* borders */
+.border{border-width:1px}.border-b{border-bottom-width:1px}.border-t{border-top-width:1px}.border-r{border-right-width:1px}
+.border-slate-300{border-color:#cbd5e1}.border-slate-600{border-color:#475569}
+.border-slate-700{border-color:#334155}.border-slate-800{border-color:#1e293b}
+.border-slate-700\/60{border-color:rgba(51,65,85,.6)}.border-purple-700\/50{border-color:rgba(126,34,206,.5)}
+.rounded{border-radius:.25rem}.rounded-md{border-radius:.375rem}.rounded-lg{border-radius:.5rem}.rounded-xl{border-radius:.75rem}
+.shadow{box-shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06)}
+.shadow-sm{box-shadow:0 1px 2px rgba(0,0,0,.05)}
+.shadow-2xl{box-shadow:0 25px 50px -12px rgba(0,0,0,.25)}
+.outline-none{outline:2px solid transparent;outline-offset:2px}
+/* interaction */
+.select-none{-webkit-user-select:none;user-select:none}
+.hover\:bg-slate-600:hover{background:#475569}.hover\:bg-slate-400:hover{background:#94a3b8}
+.hover\:bg-purple-500:hover{background:#a855f7}.hover\:bg-purple-800:hover{background:#6b21a8}
+.hover\:text-white:hover{color:#fff}.hover\:text-slate-200:hover{color:#e2e8f0}
+.hover\:bg-slate-600:hover{background:#475569}
+.focus\:ring-2:focus{box-shadow:0 0 0 2px #a855f7}
+.active\:scale-95:active{transform:scale(.95)}
+.transition{transition-property:color,background-color,border-color,opacity,box-shadow,transform;transition-duration:.15s}
+.transition-colors{transition-property:color,background-color,border-color;transition-duration:.15s}
+.transition-all{transition-property:all;transition-duration:.15s}
+.transition-opacity{transition-property:opacity;transition-duration:.15s}
+.duration-200{transition-duration:.2s}.duration-300{transition-duration:.3s}
+.hidden{display:none!important}
+/* light-mode fix: original left the text nearly invisible on a light background */
+#body-container.bg-slate-100 #editor-textarea{color:#1e293b}
+#body-container.bg-slate-100 #line-numbers{background:rgba(226,232,240,.9)}
+/* ===== end offline CSS ===== */
+</style>
     <style>
         :root {
             --app-height: 100vh;
