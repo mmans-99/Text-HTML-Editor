@@ -1,3 +1,4 @@
+html
 <!DOCTYPE html>
 <html lang="en" class="h-full w-full overflow-hidden">
 <head>
@@ -47,6 +48,7 @@
             }
         }
 
+        /* Prevent Pull-To-Refresh on Android WebViews globally */
         html, body {
             height: var(--app-height);
             max-height: var(--app-height);
@@ -54,8 +56,11 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            touch-action: manipulation;
+            touch-action: pan-x pan-y;
+            overscroll-behavior-y: none;
+            overscroll-behavior-x: none;
             -webkit-tap-highlight-color: transparent;
+            user-select: none;
         }
 
         .safe-area-top {
@@ -120,6 +125,8 @@
             height: 100%;
             width: 100%;
             overflow: auto;
+            overscroll-behavior-y: contain;
+            user-select: text;
         }
 
         .no-wrap {
@@ -343,6 +350,24 @@
   
 </body>
 </html>`;
+
+        // Strictly prevent Android WebView Pull-To-Refresh gestures
+        let touchStartY = 0;
+        document.addEventListener('touchstart', (e) => {
+            touchStartY = e.touches[0].clientY;
+        }, { passive: false });
+
+        document.addEventListener('touchmove', (e) => {
+            const touchY = e.touches[0].clientY;
+            const touchYDelta = touchY - touchStartY;
+
+            // Block pull down when at the top of scroll containers
+            if (touchYDelta > 0 && editor.scrollTop === 0 && e.target === editor) {
+                e.preventDefault();
+            } else if (touchYDelta > 0 && !editor.contains(e.target)) {
+                e.preventDefault();
+            }
+        }, { passive: false });
 
         window.addEventListener('DOMContentLoaded', () => {
             // Theme configuration
