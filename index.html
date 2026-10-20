@@ -675,6 +675,24 @@ svg{display:block}
 
         updateLineNumbers();
         updateCursor();
+
+        // Turn off native pull-to-refresh when running inside a Nativine app (does nothing in a normal browser)
+        (function disablePullToRefresh() {
+            function apply() {
+                try {
+                    const n = window.nativine || (window.Nativine && (window.Nativine.default || window.Nativine));
+                    if (n && n.ui && typeof n.ui.setPullToRefresh === 'function') {
+                        n.ui.setPullToRefresh(false);
+                        return true;
+                    }
+                } catch (_) {}
+                return false;
+            }
+            if (!apply()) {
+                let tries = 0;
+                const t = setInterval(() => { if (apply() || ++tries > 20) clearInterval(t); }, 500);
+            }
+        })();
     </script>
 </body>
 </html>
