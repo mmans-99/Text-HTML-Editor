@@ -33,7 +33,28 @@
         .safe-area-bottom {
             padding-bottom: env(safe-area-inset-bottom);
         }
-        /* Custom Scrollbar for sleek code editing */
+        /* Unified Grid Scroll Container to prevent WebView desync */
+        .editor-grid {
+            display: grid;
+            grid-template-columns: 48px 1fr;
+            height: 100%;
+            overflow-y: auto;
+            overflow-x: auto;
+            position: relative;
+        }
+        #line-numbers {
+            overflow: hidden;
+            pointer-events: none;
+            user-select: none;
+        }
+        #editor-textarea {
+            resize: none;
+            outline: none;
+            background: transparent;
+            white-space: pre;
+            overflow-x: auto;
+        }
+        /* Custom Scrollbar */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -52,9 +73,6 @@
     <!-- Top Navigation Header -->
     <header class="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 select-none shrink-0">
         <div class="flex items-center space-x-2">
-            <button id="menu-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 active:scale-95 transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
             <div class="relative">
                 <select id="file-extension" class="bg-slate-900 border border-slate-600 text-slate-100 text-sm rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-purple-500 outline-none font-mono">
                     <option value="html">.HTML</option>
@@ -131,13 +149,13 @@
     <!-- Main Content Area -->
     <main class="flex-1 relative flex overflow-hidden">
         
-        <!-- Editor View Container -->
-        <div id="editor-container" class="absolute inset-0 flex">
+        <!-- Editor View Container (Grid architecture locks line numbers & text together) -->
+        <div id="editor-container" class="absolute inset-0 editor-grid bg-slate-900" id="main-scroller">
             <!-- Line Numbers Gutter -->
-            <div id="line-numbers" class="w-12 py-3 bg-slate-900/50 text-slate-500 font-mono text-xs select-none text-right pr-2 overflow-hidden shrink-0 border-r border-slate-800">1</div>
+            <div id="line-numbers" class="py-3 bg-slate-900/90 text-slate-500 font-mono text-xs text-right pr-2 border-r border-slate-800">1</div>
             
             <!-- Code Textarea -->
-            <textarea id="editor-textarea" class="flex-1 w-full h-full bg-transparent text-slate-100 p-3 font-mono text-sm outline-none resize-none leading-relaxed whitespace-pre overflow-auto" placeholder="Type text or HTML code here ..."></textarea>
+            <textarea id="editor-textarea" class="w-full h-full bg-transparent text-slate-100 p-3 font-mono text-sm leading-relaxed" placeholder="Type text or HTML code here ..."></textarea>
         </div>
 
         <!-- Live Preview Container -->
@@ -172,19 +190,18 @@
     <script>
         const editor = document.getElementById('editor-textarea');
         const lineNumbers = document.getElementById('line-numbers');
+        const editorContainer = document.getElementById('editor-container');
         const cursorInfo = document.getElementById('cursor-pos');
         const charCount = document.getElementById('char-count');
         const extensionSelect = document.getElementById('file-extension');
         const saveBtn = document.getElementById('save-btn');
         const copyBtn = document.getElementById('copy-btn');
         const themeToggle = document.getElementById('theme-toggle');
-        const themeIcon = document.getElementById('theme-icon');
         const bodyContainer = document.getElementById('body-container');
         const themeMeta = document.getElementById('theme-color-meta');
         
         const tabEditor = document.getElementById('tab-editor');
         const tabPreview = document.getElementById('tab-preview');
-        const editorContainer = document.getElementById('editor-container');
         const previewContainer = document.getElementById('preview-container');
         const previewFrame = document.getElementById('preview-frame');
         const wrapToggle = document.getElementById('wrap-toggle');
@@ -195,10 +212,8 @@
         let currentFontSize = 14;
         let isDarkMode = true;
 
-        // Start empty by default
         editor.value = "";
 
-        // Update Line Numbers & Cursor Stats
         function updateLineNumbers() {
             const lines = editor.value.split('\n').length;
             let nums = '';
@@ -217,11 +232,6 @@
             cursorInfo.innerText = `Ln ${ln}, Col ${col}`;
             charCount.innerText = `${editor.value.length} chars`;
         }
-
-        // Synchronized Scrolling
-        editor.addEventListener('scroll', () => {
-            lineNumbers.scrollTop = editor.scrollTop;
-        });
 
         editor.addEventListener('input', () => {
             updateLineNumbers();
@@ -268,7 +278,6 @@
             }
         });
 
-        // Quick Symbol Insertion
         window.insertCode = function(text, cursorOffset = 0) {
             const start = editor.selectionStart;
             const end = editor.selectionEnd;
@@ -280,7 +289,6 @@
             updateCursor();
         };
 
-        // Tabs: Editor vs Preview
         tabEditor.addEventListener('click', () => {
             tabEditor.className = "px-3 py-1 rounded-md font-medium bg-purple-600 text-white transition";
             tabPreview.className = "px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition";
@@ -294,7 +302,6 @@
             previewContainer.classList.remove('hidden');
             editorContainer.classList.add('hidden');
             
-            // Render Live Preview
             const blob = new Blob([editor.value], { type: 'text/html' });
             previewFrame.src = URL.createObjectURL(blob);
         });
@@ -309,26 +316,26 @@
             }
         };
 
-        // Theme Toggle (Light / Dark)
+        // Theme Toggle
         themeToggle.addEventListener('click', () => {
             isDarkMode = !isDarkMode;
             if (isDarkMode) {
                 bodyContainer.className = "bg-slate-900 text-slate-100 flex flex-col justify-between h-[var(--app-height)] overflow-hidden safe-area-top safe-area-bottom transition-colors duration-200";
+                editorContainer.className = "absolute inset-0 editor-grid bg-slate-900";
                 themeMeta.content = "#0f172a";
             } else {
                 bodyContainer.className = "bg-slate-100 text-slate-800 flex flex-col justify-between h-[var(--app-height)] overflow-hidden safe-area-top safe-area-bottom transition-colors duration-200";
+                editorContainer.className = "absolute inset-0 editor-grid bg-slate-100";
                 themeMeta.content = "#f1f5f9";
             }
         });
 
-        // Copy Content Fallback
         copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(editor.value).then(() => {
                 showToast('Copied to clipboard!');
             });
         });
 
-        // Save File Locally
         saveBtn.addEventListener('click', () => {
             const ext = extensionSelect.value;
             const filename = `document.${ext}`;
@@ -352,7 +359,6 @@
             showToast(`Saved ${filename}`);
         });
 
-        // Open Local File
         document.getElementById('file-input').addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
@@ -379,7 +385,6 @@
             }, 2000);
         }
 
-        // Initialize line numbers on load
         updateLineNumbers();
     </script>
 </body>
