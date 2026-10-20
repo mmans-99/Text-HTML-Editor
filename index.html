@@ -1,718 +1,386 @@
-html
 <!DOCTYPE html>
-<html lang="en" class="h-full w-full overflow-hidden">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Mobile Text & HTML Editor</title>
-    
-    <!-- Web App Manifest for Android Installation -->
-    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk1vYmlsZSBUZXh0ICYgSFRNTCBFZGl0b3IiLAogICJzaG9ydF9uYW1lIjogIkhUTUwgRWRpdG9yIiwKICAic3RhcnRfdXJsIjogIi4iLAogICJkaXNwbGF5IjogInN0YW5kYWxvbmUiLAogICJiYWNrZ3JvdW5kX2NvbG9yIjogIiMxMmExMTYiLAogICJ0aGVtZV9jb2xvciI6ICIjNjc1MGE0IiwKICAiaWNvbnMiOiBbXQp9">
-    <meta name="theme-color" content="#6750a4">
-
-    <!-- Tailwind CSS -->
+    <meta name="theme-color" id="theme-color-meta" content="#0f172a">
+    <title>Android TXT/HTML Editor</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts & Material Symbols -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
-
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Roboto', 'sans-serif'],
-                        mono: ['Fira Code', 'monospace'],
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
-        /* Exact metrics and responsive heights */
         :root {
             --app-height: 100vh;
-            --editor-font-size: 14px;
-            --editor-line-height: 20px;
-            --editor-padding: 8px;
         }
-
         @supports (height: 100dvh) {
             :root {
                 --app-height: 100dvh;
             }
         }
-
-        /* Prevent Pull-To-Refresh on Android WebViews globally */
         html, body {
             height: var(--app-height);
-            max-height: var(--app-height);
-            width: 100vw;
-            margin: 0;
-            padding: 0;
             overflow: hidden;
-            touch-action: pan-x pan-y;
             overscroll-behavior-y: none;
-            overscroll-behavior-x: none;
-            -webkit-tap-highlight-color: transparent;
+            touch-action: pan-x pan-y;
+            -webkit-user-select: none;
             user-select: none;
         }
-
-        .safe-area-top {
-            padding-top: env(safe-area-inset-top, 0px);
-        }
-
-        .safe-area-bottom {
-            padding-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        /* Unified scroll viewport */
-        .editor-viewport {
-            display: flex;
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            position: relative;
-        }
-
-        /* Line Numbers Column: Exact font and line-height metrics */
-        .line-numbers-col {
-            user-select: none;
-            text-align: right;
-            padding-top: var(--editor-padding);
-            padding-bottom: var(--editor-padding);
-            padding-left: 4px;
-            padding-right: 8px;
-            color: #9ca3af;
-            font-family: 'Fira Code', monospace;
-            font-size: var(--editor-font-size);
-            line-height: var(--editor-line-height);
-            white-space: pre;
-            background-color: #f8fafc;
-            border-right: 1px solid #e2e8f0;
-            box-sizing: border-box;
-            min-width: 3.25rem;
-            flex-shrink: 0;
-            overflow: hidden;
-            pointer-events: none;
-        }
-
-        .dark .line-numbers-col {
-            background-color: #0f172a;
-            border-right-color: #334155;
-            color: #64748b;
-        }
-
-        /* Textarea: Matches Line Numbers metrics strictly */
-        .editor-textarea {
-            flex: 1;
-            resize: none;
-            outline: none;
-            border: none;
-            background: transparent;
-            font-family: 'Fira Code', monospace;
-            font-size: var(--editor-font-size);
-            line-height: var(--editor-line-height);
-            tab-size: 2;
-            box-sizing: border-box;
-            padding: var(--editor-padding);
-            margin: 0;
-            height: 100%;
-            width: 100%;
-            overflow: auto;
-            overscroll-behavior-y: contain;
+        textarea, input, select {
+            -webkit-user-select: text;
             user-select: text;
         }
-
-        .no-wrap {
-            white-space: pre !important;
-            word-break: normal !important;
-            overflow-x: auto !important;
+        .safe-area-top {
+            padding-top: env(safe-area-inset-top);
         }
-
-        .wrap-text {
-            white-space: pre-wrap !important;
-            word-break: break-word !important;
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom);
         }
-
-        /* Custom Scrollbars */
-        .custom-scroll::-webkit-scrollbar {
+        /* Custom Scrollbar for sleek code editing */
+        ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
         }
-        .custom-scroll::-webkit-scrollbar-thumb {
-            background: rgba(156, 163, 175, 0.5);
-            border-radius: 9999px;
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
         }
-        .dark .custom-scroll::-webkit-scrollbar-thumb {
-            background: rgba(71, 85, 105, 0.5);
-        }
-
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
+        ::-webkit-scrollbar-thumb {
+            background: rgba(150,150,150,0.4);
+            border-radius: 3px;
         }
     </style>
 </head>
-<body class="h-full w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200 selection:bg-purple-300 dark:selection:bg-purple-800">
+<body class="bg-slate-900 text-slate-100 flex flex-col justify-between h-[var(--app-height)] overflow-hidden safe-area-top safe-area-bottom transition-colors duration-200" id="body-container">
 
-    <!-- Header Bar -->
-    <header class="safe-area-top bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-3 py-2 flex items-center justify-between shadow-xs z-30 shrink-0">
-        <div class="flex items-center space-x-2 min-w-0 flex-1">
-            <span class="material-symbols-outlined text-purple-600 dark:text-purple-400 text-2xl shrink-0">edit_note</span>
-            <div class="min-w-0 flex-1 pr-2">
-                <input type="text" id="filename-input" value="untitled.html" class="w-full font-bold text-sm bg-transparent border-b border-transparent hover:border-slate-300 focus:border-purple-600 focus:outline-none px-1 rounded transition truncate" title="Tap to rename file">
-                <span id="file-status" class="text-[10px] block text-emerald-600 dark:text-emerald-400 font-medium px-1 truncate">Ready</span>
+    <!-- Top Navigation Header -->
+    <header class="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 select-none shrink-0">
+        <div class="flex items-center space-x-2">
+            <button id="menu-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 active:scale-95 transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            </button>
+            <div class="relative">
+                <select id="file-extension" class="bg-slate-900 border border-slate-600 text-slate-100 text-sm rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-purple-500 outline-none font-mono">
+                    <option value="html">.HTML</option>
+                    <option value="txt">.TXT</option>
+                    <option value="css">.CSS</option>
+                    <option value="js">.JS</option>
+                    <option value="json">.JSON</option>
+                </select>
             </div>
         </div>
 
-        <div class="flex items-center space-x-1 shrink-0">
-            <!-- File Format Extension Selector -->
-            <select id="format-selector" onchange="onFormatChange()" class="bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-mono font-semibold px-2 py-1 rounded border border-slate-300 dark:border-slate-600 outline-none cursor-pointer">
-                <option value="html">.HTML</option>
-                <option value="txt">.TXT</option>
-                <option value="css">.CSS</option>
-                <option value="js">.JS</option>
-                <option value="json">.JSON</option>
-            </select>
-
+        <div class="flex items-center space-x-2">
             <!-- Theme Toggle -->
-            <button id="theme-btn" onclick="toggleTheme()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Toggle Dark/Light Mode">
-                <span class="material-symbols-outlined text-xl block dark:hidden">dark_mode</span>
-                <span class="material-symbols-outlined text-xl hidden dark:block">light_mode</span>
+            <button id="theme-toggle" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 active:scale-95 transition" title="Toggle Light/Dark Mode">
+                <svg id="theme-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
             </button>
 
-            <!-- Copy All Button -->
-            <button onclick="copyToClipboard()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Copy All Code">
-                <span class="material-symbols-outlined text-xl">content_copy</span>
+            <!-- Copy Button Fallback -->
+            <button id="copy-btn" class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 active:scale-95 transition" title="Copy Content">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
             </button>
 
-            <!-- New File Button -->
-            <button onclick="createNewFile()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="New Document">
-                <span class="material-symbols-outlined text-xl">note_add</span>
-            </button>
-
-            <!-- Open File Button -->
-            <button onclick="openFile()" class="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 active:scale-95 transition" title="Open Local File">
-                <span class="material-symbols-outlined text-xl">folder_open</span>
-            </button>
+            <!-- Open File -->
+            <label class="p-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-slate-200 cursor-pointer active:scale-95 transition" title="Open File">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 19a2 2 0 01-2-2V7a2 2 0 012-2h4l2 2h4a2 2 0 012 2v1M5 19h14a2 2 0 002-2v-5a2 2 0 00-2-2H9a2 2 0 00-2 2v5a2 2 0 01-2 2z"></path></svg>
+                <input type="file" id="file-input" class="hidden">
+            </label>
 
             <!-- Save File Button -->
-            <button onclick="saveFile()" class="flex items-center gap-1 bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-full shadow text-xs sm:text-sm font-medium transition active:scale-95">
-                <span class="material-symbols-outlined text-base sm:text-lg">download</span>
-                <span class="inline">Save</span>
+            <button id="save-btn" class="flex items-center space-x-1.5 bg-purple-600 hover:bg-purple-500 text-white font-medium px-3.5 py-1.5 rounded-lg shadow active:scale-95 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                <span class="text-sm">Save</span>
             </button>
         </div>
     </header>
 
-    <!-- Hidden File Input for Opening Local Files -->
-    <input type="file" id="file-input" class="hidden" accept=".html,.htm,.txt,.css,.js,.json" onchange="handleFileSelect(event)">
-
-    <!-- Editor Mode & Font Controls -->
-    <div class="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700 px-3 py-1.5 flex items-center justify-between text-xs font-medium shrink-0">
-        <!-- Tab Mode Controls -->
-        <div class="flex space-x-1 bg-slate-200 dark:bg-slate-700 p-0.5 rounded-lg">
-            <button id="tab-edit" onclick="switchTab('edit')" class="px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">code</span> Editor
-            </button>
-            <button id="tab-preview" onclick="switchTab('preview')" class="px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1">
-                <span class="material-symbols-outlined text-sm">visibility</span> Preview
-            </button>
-            <button id="tab-split" onclick="switchTab('split')" class="hidden md:flex px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition items-center gap-1">
-                <span class="material-symbols-outlined text-sm">vertical_split</span> Split
-            </button>
+    <!-- Sub Header Controls -->
+    <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 border-b border-slate-700/60 text-xs shrink-0 select-none">
+        <!-- Mode Tabs -->
+        <div class="flex items-center bg-slate-900 rounded-lg p-0.5 border border-slate-700">
+            <button id="tab-editor" class="px-3 py-1 rounded-md font-medium bg-purple-600 text-white transition">Editor</button>
+            <button id="tab-preview" class="px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition">Preview</button>
         </div>
 
-        <!-- Word Wrap & Font Size Adjustments -->
+        <!-- Editor Options -->
         <div class="flex items-center space-x-2">
-            <button id="wrap-btn" onclick="toggleWordWrap()" class="px-2 py-1 rounded bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-600 font-mono text-[11px] flex items-center gap-1" title="Toggle Word Wrap">
-                <span class="material-symbols-outlined text-xs">wrap_text</span>
-                <span id="wrap-status">No Wrap</span>
-            </button>
-
-            <div class="flex items-center bg-slate-200 dark:bg-slate-700 rounded-lg px-1.5 py-0.5">
-                <button onclick="changeFontSize(-1)" class="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-600 rounded active:scale-90">
-                    <span class="material-symbols-outlined text-xs">remove</span>
-                </button>
-                <span id="font-size-display" class="px-1.5 text-[11px] font-mono">14px</span>
-                <button onclick="changeFontSize(1)" class="p-0.5 hover:bg-slate-300 dark:hover:bg-slate-600 rounded active:scale-90">
-                    <span class="material-symbols-outlined text-xs">add</span>
-                </button>
+            <button id="wrap-toggle" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded transition font-mono">No Wrap</button>
+            <div class="flex items-center space-x-1 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5">
+                <button id="font-dec" class="px-1 text-slate-300 hover:text-white font-bold">-</button>
+                <span id="font-size-display" class="font-mono text-slate-300">14px</span>
+                <button id="font-inc" class="px-1 text-slate-300 hover:text-white font-bold">+</button>
             </div>
         </div>
     </div>
 
-    <!-- Quick Symbol Touch Keyboard -->
-    <div id="quick-toolbar" class="bg-slate-100 dark:bg-slate-800/90 border-b border-slate-200 dark:border-slate-700 px-2 py-1 flex items-center gap-1 overflow-x-auto no-scrollbar text-xs shrink-0 select-none">
-        <button onclick="insertHTML5Boilerplate()" class="px-2.5 py-1 bg-purple-600 text-white rounded font-bold text-xs shrink-0 active:scale-95 shadow-xs" title="Insert HTML5 Starter Code">&lt;!&gt;</button>
-        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-1 shrink-0">Symbols:</span>
-        <button onclick="insertSymbol('<')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&lt;</button>
-        <button onclick="insertSymbol('>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&gt;</button>
-        <button onclick="insertSymbol('/')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">/</button>
-        <button onclick="insertSymbol('=')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">=</button>
-        <button onclick="insertSymbol('&quot;')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">&quot;</button>
-        <button onclick="insertSymbol('\'')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">'</button>
-        <button onclick="insertSymbol('{', '}')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">{}</button>
-        <button onclick="insertSymbol('[', ']')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">[]</button>
-        <button onclick="insertSymbol('!')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono active:bg-purple-100 text-xs shrink-0">!</button>
-        
-        <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold px-1 shrink-0 ml-1">Tags:</span>
-        <button onclick="insertSymbol('<div>', '</div>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-xs shrink-0">div</button>
-        <button onclick="insertSymbol('<p>', '</p>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-xs shrink-0">p</button>
-        <button onclick="insertSymbol('<style>\n', '\n</style>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-amber-600 dark:text-amber-400 text-xs shrink-0">style</button>
-        <button onclick="insertSymbol('<script>\n', '\n<\/script>')" class="px-2.5 py-1 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded font-mono text-sky-600 dark:text-sky-400 text-xs shrink-0">script</button>
+    <!-- Quick Touch Symbol Toolbar -->
+    <div id="symbol-bar" class="flex items-center overflow-x-auto space-x-1 px-2 py-1.5 bg-slate-800/90 border-b border-slate-700/60 shrink-0 whitespace-nowrap">
+        <button onclick="insertCode('<!DOCTYPE html>\n<html>\n<head>\n\t<title></title>\n</head>\n<body>\n\t\n</body>\n</html>', true)" class="px-2 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 rounded text-xs font-mono font-bold border border-purple-700/50">&lt;!&gt;</button>
+        <span class="text-slate-600">|</span>
+        <span class="text-xs text-slate-400 font-mono px-1">SYMBOLS:</span>
+        <button onclick="insertCode('&lt;')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">&lt;</button>
+        <button onclick="insertCode('&gt;')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">&gt;</button>
+        <button onclick="insertCode('/')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">/</button>
+        <button onclick="insertCode('=')" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">=</button>
+        <button onclick="insertCode('&quot;&quot;', 1)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">"</button>
+        <button onclick="insertCode(&quot;''&quot;, 1)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">'</button>
+        <button onclick="insertCode('{}', 1)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">{}</button>
+        <button onclick="insertCode('[]', 1)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">[]</button>
+        <button onclick="insertCode('&lt;div&gt;&lt;/div&gt;', 6)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">&lt;div&gt;</button>
+        <button onclick="insertCode('&lt;p&gt;&lt;/p&gt;', 3)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">&lt;p&gt;</button>
+        <button onclick="insertCode('&lt;h1&gt;&lt;/h1&gt;', 4)" class="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs font-mono">&lt;h1&gt;</button>
     </div>
 
-    <!-- Main Content Workspace -->
-    <main class="flex-1 w-full min-h-0 relative overflow-hidden flex flex-col md:flex-row bg-white dark:bg-slate-900">
+    <!-- Main Content Area -->
+    <main class="flex-1 relative flex overflow-hidden">
+        
+        <!-- Editor View Container -->
+        <div id="editor-container" class="absolute inset-0 flex">
+            <!-- Line Numbers Gutter -->
+            <div id="line-numbers" class="w-12 py-3 bg-slate-900/50 text-slate-500 font-mono text-xs select-none text-right pr-2 overflow-hidden shrink-0 border-r border-slate-800">1</div>
+            
+            <!-- Code Textarea -->
+            <textarea id="editor-textarea" class="flex-1 w-full h-full bg-transparent text-slate-100 p-3 font-mono text-sm outline-none resize-none leading-relaxed whitespace-pre overflow-auto" placeholder="Type text or HTML code here ..."></textarea>
+        </div>
 
-        <!-- Code Editor Section -->
-        <section id="editor-section" class="w-full h-full flex-1 flex flex-col overflow-hidden relative">
-            <div id="editor-viewport" class="editor-viewport custom-scroll">
-                <!-- Line Numbers Column -->
-                <div id="line-numbers" class="line-numbers-col">1</div>
-                <!-- Completely Empty Textarea -->
-                <textarea id="editor" spellcheck="false" autocomplete="off" auto-capitalize="off" class="editor-textarea no-wrap text-slate-800 dark:text-slate-100" placeholder="Type text or HTML code here..."></textarea>
+        <!-- Live Preview Container -->
+        <div id="preview-container" class="absolute inset-0 hidden bg-white flex flex-col">
+            <div class="bg-slate-200 px-3 py-1 flex items-center justify-between border-b border-slate-300 text-xs text-slate-700">
+                <span class="font-bold">Live Preview Mode</span>
+                <div class="space-x-2">
+                    <button onclick="setPreviewMode('mobile')" class="px-2 py-0.5 bg-slate-300 hover:bg-slate-400 rounded">Phone</button>
+                    <button onclick="setPreviewMode('full')" class="px-2 py-0.5 bg-slate-300 hover:bg-slate-400 rounded">Full</button>
+                </div>
             </div>
-        </section>
-
-        <!-- Live HTML Preview Section -->
-        <section id="preview-section" class="w-full h-full flex-1 bg-slate-50 dark:bg-slate-950 hidden md:flex flex-col border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800">
-            <div class="bg-slate-200 dark:bg-slate-800 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-400 flex justify-between items-center select-none border-b border-slate-300 dark:border-slate-700 shrink-0">
-                <span class="flex items-center gap-1.5 font-medium">
-                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-                    Live HTML Render
-                </span>
-                
-                <button onclick="refreshPreview()" class="hover:text-purple-600 flex items-center gap-0.5 text-xs">
-                    <span class="material-symbols-outlined text-sm">refresh</span> Reload
-                </button>
+            <div class="flex-1 flex justify-center items-center p-2 bg-slate-100 overflow-auto">
+                <iframe id="preview-frame" class="w-full h-full bg-white border border-slate-300 rounded shadow-sm transition-all duration-300"></iframe>
             </div>
-
-            <div id="iframe-wrapper" class="w-full flex-1 flex justify-center items-center overflow-auto p-0 transition-all bg-slate-200/50 dark:bg-slate-900/50">
-                <iframe id="preview-iframe" class="w-full h-full border-none bg-white shadow-sm" sandbox="allow-scripts allow-modals allow-forms"></iframe>
-            </div>
-        </section>
+        </div>
 
     </main>
 
-    <!-- Bottom Status Bar -->
-    <footer class="safe-area-bottom bg-slate-100 dark:bg-slate-800/90 border-t border-slate-200 dark:border-slate-700 px-3 py-1.5 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between select-none shrink-0">
-        <div class="flex items-center space-x-3">
-            <span id="cursor-pos">Ln 1, Col 1</span>
-            <span id="char-count">0 chars</span>
-        </div>
-        <div>
-            <span class="text-[10px] uppercase font-bold text-slate-400">Android TXT/HTML Editor</span>
-        </div>
+    <!-- Footer Status Bar -->
+    <footer class="flex items-center justify-between px-3 py-1 bg-slate-800 border-t border-slate-700 text-xs text-slate-400 select-none shrink-0 font-mono">
+        <div id="cursor-pos">Ln 1, Col 1</div>
+        <div id="char-count">0 chars</div>
+        <div class="text-[10px] text-slate-500">MOBILE CODE EDITOR</div>
     </footer>
 
-    <!-- Toast Notification Banner -->
-    <div id="toast" class="fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2 rounded-full shadow-lg text-xs font-medium transition-all duration-300 opacity-0 pointer-events-none z-50 flex items-center gap-2">
-        <span id="toast-message">Notification</span>
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-12 left-1/2 transform -translate-x-1/2 bg-slate-900 border border-slate-700 text-slate-100 px-4 py-2 rounded-xl shadow-2xl opacity-0 pointer-events-none transition-opacity duration-300 z-50 text-sm font-medium">
+        Saved!
     </div>
 
-    <!-- Application JavaScript Logic -->
+    <!-- JavaScript Logic -->
     <script>
-        const editor = document.getElementById('editor');
+        const editor = document.getElementById('editor-textarea');
         const lineNumbers = document.getElementById('line-numbers');
-        const previewIframe = document.getElementById('preview-iframe');
-        const filenameInput = document.getElementById('filename-input');
-        const fileStatus = document.getElementById('file-status');
-        const editorSection = document.getElementById('editor-section');
-        const previewSection = document.getElementById('preview-section');
-        const cursorPos = document.getElementById('cursor-pos');
+        const cursorInfo = document.getElementById('cursor-pos');
         const charCount = document.getElementById('char-count');
-        const formatSelector = document.getElementById('format-selector');
+        const extensionSelect = document.getElementById('file-extension');
+        const saveBtn = document.getElementById('save-btn');
+        const copyBtn = document.getElementById('copy-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const bodyContainer = document.getElementById('body-container');
+        const themeMeta = document.getElementById('theme-color-meta');
+        
+        const tabEditor = document.getElementById('tab-editor');
+        const tabPreview = document.getElementById('tab-preview');
+        const editorContainer = document.getElementById('editor-container');
+        const previewContainer = document.getElementById('preview-container');
+        const previewFrame = document.getElementById('preview-frame');
+        const wrapToggle = document.getElementById('wrap-toggle');
+        const fontInc = document.getElementById('font-inc');
+        const fontDec = document.getElementById('font-dec');
         const fontSizeDisplay = document.getElementById('font-size-display');
-        const wrapStatus = document.getElementById('wrap-status');
 
-        let fontSize = 14;
-        let isWordWrap = false;
-        let isModified = false;
+        let currentFontSize = 14;
+        let isDarkMode = true;
 
-        const htmlBoilerplate = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document</title>
-</head>
-<body>
-  
-</body>
-</html>`;
+        // Start empty by default
+        editor.value = "";
 
-        // Strictly prevent Android WebView Pull-To-Refresh gestures
-        let touchStartY = 0;
-        document.addEventListener('touchstart', (e) => {
-            touchStartY = e.touches[0].clientY;
-        }, { passive: false });
-
-        document.addEventListener('touchmove', (e) => {
-            const touchY = e.touches[0].clientY;
-            const touchYDelta = touchY - touchStartY;
-
-            // Block pull down when at the top of scroll containers
-            if (touchYDelta > 0 && editor.scrollTop === 0 && e.target === editor) {
-                e.preventDefault();
-            } else if (touchYDelta > 0 && !editor.contains(e.target)) {
-                e.preventDefault();
+        // Update Line Numbers & Cursor Stats
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n').length;
+            let nums = '';
+            for (let i = 1; i <= lines; i++) {
+                nums += i + '<br>';
             }
-        }, { passive: false });
+            lineNumbers.innerHTML = nums;
+        }
 
-        window.addEventListener('DOMContentLoaded', () => {
-            // Theme configuration
-            if (localStorage.getItem('editor_theme') === 'dark' || (!('editor_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-                document.documentElement.classList.add('dark');
+        function updateCursor() {
+            const pos = editor.selectionStart;
+            const textBefore = editor.value.substring(0, pos);
+            const lines = textBefore.split('\n');
+            const ln = lines.length;
+            const col = lines[lines.length - 1].length + 1;
+            cursorInfo.innerText = `Ln ${ln}, Col ${col}`;
+            charCount.innerText = `${editor.value.length} chars`;
+        }
+
+        // Synchronized Scrolling
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
+        });
+
+        editor.addEventListener('input', () => {
+            updateLineNumbers();
+            updateCursor();
+            saveToLocalStorage();
+        });
+
+        editor.addEventListener('click', updateCursor);
+        editor.addEventListener('keyup', updateCursor);
+
+        // Word Wrap Toggle
+        let isWrapped = false;
+        wrapToggle.addEventListener('click', () => {
+            isWrapped = !isWrapped;
+            if (isWrapped) {
+                editor.style.whiteSpace = 'pre-wrap';
+                editor.style.overflowX = 'hidden';
+                wrapToggle.innerText = 'Wrap On';
+                wrapToggle.classList.replace('bg-slate-700', 'bg-purple-700');
+            } else {
+                editor.style.whiteSpace = 'pre';
+                editor.style.overflowX = 'auto';
+                wrapToggle.innerText = 'No Wrap';
+                wrapToggle.classList.replace('bg-purple-700', 'bg-slate-700');
             }
+        });
 
-            // Textarea starts COMPLETELY BLANK
-            editor.value = '';
+        // Font Size Adjustment
+        fontInc.addEventListener('click', () => {
+            if (currentFontSize < 24) {
+                currentFontSize += 2;
+                editor.style.fontSize = currentFontSize + 'px';
+                lineNumbers.style.fontSize = currentFontSize + 'px';
+                fontSizeDisplay.innerText = currentFontSize + 'px';
+            }
+        });
+
+        fontDec.addEventListener('click', () => {
+            if (currentFontSize > 10) {
+                currentFontSize -= 2;
+                editor.style.fontSize = currentFontSize + 'px';
+                lineNumbers.style.fontSize = currentFontSize + 'px';
+                fontSizeDisplay.innerText = currentFontSize + 'px';
+            }
+        });
+
+        // Quick Symbol Insertion
+        window.insertCode = function(text, cursorOffset = 0) {
+            const start = editor.selectionStart;
+            const end = editor.selectionEnd;
+            const val = editor.value;
+            editor.value = val.substring(0, start) + text + val.substring(end);
+            editor.focus();
+            editor.selectionStart = editor.selectionEnd = start + text.length - cursorOffset;
+            updateLineNumbers();
+            updateCursor();
+        };
+
+        // Tabs: Editor vs Preview
+        tabEditor.addEventListener('click', () => {
+            tabEditor.className = "px-3 py-1 rounded-md font-medium bg-purple-600 text-white transition";
+            tabPreview.className = "px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition";
+            editorContainer.classList.remove('hidden');
+            previewContainer.classList.add('hidden');
+        });
+
+        tabPreview.addEventListener('click', () => {
+            tabPreview.className = "px-3 py-1 rounded-md font-medium bg-purple-600 text-white transition";
+            tabEditor.className = "px-3 py-1 rounded-md font-medium text-slate-400 hover:text-slate-200 transition";
+            previewContainer.classList.remove('hidden');
+            editorContainer.classList.add('hidden');
             
-            updateEditorLines();
-            syncExtensionWithFilename();
+            // Render Live Preview
+            const blob = new Blob([editor.value], { type: 'text/html' });
+            previewFrame.src = URL.createObjectURL(blob);
+        });
 
-            // STRICT SYNCHRONIZED VERTICAL SCROLLING
-            editor.addEventListener('scroll', () => {
-                lineNumbers.scrollTop = editor.scrollTop;
-            });
+        window.setPreviewMode = function(mode) {
+            if (mode === 'mobile') {
+                previewFrame.style.maxWidth = '375px';
+                previewFrame.style.maxHeight = '667px';
+            } else {
+                previewFrame.style.maxWidth = '100%';
+                previewFrame.style.maxHeight = '100%';
+            }
+        };
 
-            // Input handlers
-            editor.addEventListener('input', () => {
-                isModified = true;
-                markUnsaved();
-                updateEditorLines();
-                debouncePreview();
-                saveToLocalStorage();
-            });
+        // Theme Toggle (Light / Dark)
+        themeToggle.addEventListener('click', () => {
+            isDarkMode = !isDarkMode;
+            if (isDarkMode) {
+                bodyContainer.className = "bg-slate-900 text-slate-100 flex flex-col justify-between h-[var(--app-height)] overflow-hidden safe-area-top safe-area-bottom transition-colors duration-200";
+                themeMeta.content = "#0f172a";
+            } else {
+                bodyContainer.className = "bg-slate-100 text-slate-800 flex flex-col justify-between h-[var(--app-height)] overflow-hidden safe-area-top safe-area-bottom transition-colors duration-200";
+                themeMeta.content = "#f1f5f9";
+            }
+        });
 
-            editor.addEventListener('keyup', updateCursorStats);
-            editor.addEventListener('click', updateCursorStats);
-
-            filenameInput.addEventListener('input', () => {
-                syncExtensionWithFilename();
-                localStorage.setItem('mobile_editor_filename', filenameInput.value);
+        // Copy Content Fallback
+        copyBtn.addEventListener('click', () => {
+            navigator.clipboard.writeText(editor.value).then(() => {
+                showToast('Copied to clipboard!');
             });
         });
 
-        // Exact line counting & wrapper alignment
-        function updateEditorLines() {
-            const lines = editor.value.split('\n');
-            const lineCount = lines.length;
+        // Save File Locally
+        saveBtn.addEventListener('click', () => {
+            const ext = extensionSelect.value;
+            const filename = `document.${ext}`;
+            const mimeTypes = {
+                'html': 'text/html',
+                'txt': 'text/plain',
+                'css': 'text/css',
+                'js': 'application/javascript',
+                'json': 'application/json'
+            };
+            
+            const blob = new Blob([editor.value], { type: mimeTypes[ext] || 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+            showToast(`Saved ${filename}`);
+        });
 
-            if (!isWordWrap) {
-                lineNumbers.innerHTML = Array.from({ length: lineCount }, (_, i) => i + 1).join('\n');
-            } else {
-                const computedStyle = window.getComputedStyle(editor);
-                const width = editor.clientWidth - parseFloat(computedStyle.paddingLeft) - parseFloat(computedStyle.paddingRight);
-                
-                const canvas = updateEditorLines.canvas || (updateEditorLines.canvas = document.createElement('canvas'));
-                const context = canvas.getContext('2d');
-                context.font = `${computedStyle.fontSize} ${computedStyle.fontFamily}`;
-
-                let lineNumHTML = '';
-                lines.forEach((lineText, idx) => {
-                    lineNumHTML += (idx + 1) + '\n';
-                    if (lineText.length > 0 && width > 0) {
-                        const words = lineText.split('');
-                        let currentLine = '';
-                        let wrappedCount = 0;
-
-                        for (let n = 0; n < words.length; n++) {
-                            const testLine = currentLine + words[n];
-                            const metrics = context.measureText(testLine);
-                            if (metrics.width > width && n > 0) {
-                                currentLine = words[n];
-                                wrappedCount++;
-                            } else {
-                                currentLine = testLine;
-                            }
-                        }
-                        for (let w = 0; w < wrappedCount; w++) {
-                            lineNumHTML += '\n';
-                        }
-                    }
-                });
-                lineNumbers.innerHTML = lineNumHTML;
-            }
-
-            charCount.textContent = `${editor.value.length} chars`;
-        }
-
-        // Toggle Word Wrap
-        function toggleWordWrap() {
-            isWordWrap = !isWordWrap;
-            if (isWordWrap) {
-                editor.classList.remove('no-wrap');
-                editor.classList.add('wrap-text');
-                wrapStatus.textContent = 'Wrap On';
-            } else {
-                editor.classList.remove('wrap-text');
-                editor.classList.add('no-wrap');
-                wrapStatus.textContent = 'No Wrap';
-            }
-            updateEditorLines();
-        }
-
-        // Font Size Adjuster
-        function changeFontSize(delta) {
-            fontSize = Math.max(10, Math.min(28, fontSize + delta));
-            const lineHeight = Math.round(fontSize * 1.428);
-            document.documentElement.style.setProperty('--editor-font-size', `${fontSize}px`);
-            document.documentElement.style.setProperty('--editor-line-height', `${lineHeight}px`);
-            fontSizeDisplay.textContent = `${fontSize}px`;
-            updateEditorLines();
-        }
-
-        function updateCursorStats() {
-            const text = editor.value;
-            const pos = editor.selectionStart;
-            const lines = text.substring(0, pos).split('\n');
-            const lineNum = lines.length;
-            const colNum = lines[lines.length - 1].length + 1;
-            cursorPos.textContent = `Ln ${lineNum}, Col ${colNum}`;
-        }
-
-        function markUnsaved() {
-            fileStatus.textContent = 'Unsaved changes';
-            fileStatus.className = 'text-[10px] block text-amber-600 dark:text-amber-400 font-medium px-1 truncate';
-        }
-
-        function markSaved() {
-            isModified = false;
-            fileStatus.textContent = 'Saved to device';
-            fileStatus.className = 'text-[10px] block text-emerald-600 dark:text-emerald-400 font-medium px-1 truncate';
-        }
-
-        function syncExtensionWithFilename() {
-            const name = filenameInput.value.toLowerCase();
-            if (name.endsWith('.html') || name.endsWith('.htm')) formatSelector.value = 'html';
-            else if (name.endsWith('.txt')) formatSelector.value = 'txt';
-            else if (name.endsWith('.css')) formatSelector.value = 'css';
-            else if (name.endsWith('.js')) formatSelector.value = 'js';
-            else if (name.endsWith('.json')) formatSelector.value = 'json';
-        }
-
-        function onFormatChange() {
-            let baseName = filenameInput.value.replace(/\.[^/.]+$/, "");
-            if (!baseName) baseName = "untitled";
-            filenameInput.value = `${baseName}.${formatSelector.value}`;
-            localStorage.setItem('mobile_editor_filename', filenameInput.value);
-        }
-
-        // Live Preview Controls
-        let previewTimer;
-        function debouncePreview() {
-            clearTimeout(previewTimer);
-            previewTimer = setTimeout(updatePreview, 350);
-        }
-
-        function updatePreview() {
-            const code = editor.value;
-            const doc = previewIframe.contentWindow.document;
-            doc.open();
-            doc.write(code);
-            doc.close();
-        }
-
-        function refreshPreview() {
-            updatePreview();
-            showToast('Preview reloaded');
-        }
-
-        // View Mode Switcher
-        function switchTab(mode) {
-            const editBtn = document.getElementById('tab-edit');
-            const previewBtn = document.getElementById('tab-preview');
-            const splitBtn = document.getElementById('tab-split');
-
-            [editBtn, previewBtn, splitBtn].forEach(btn => {
-                if (btn) btn.className = 'px-2.5 py-1 rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 transition flex items-center gap-1';
-            });
-
-            if (mode === 'edit') {
-                editBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
-                editorSection.classList.remove('hidden');
-                previewSection.classList.add('hidden');
-                previewSection.classList.remove('flex');
-            } else if (mode === 'preview') {
-                previewBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
-                editorSection.classList.add('hidden');
-                previewSection.classList.remove('hidden');
-                previewSection.classList.add('flex');
-                updatePreview();
-            } else if (mode === 'split') {
-                splitBtn.className = 'px-2.5 py-1 rounded-md bg-white dark:bg-slate-800 shadow-2xs text-purple-600 dark:text-purple-300 font-bold transition flex items-center gap-1';
-                editorSection.classList.remove('hidden');
-                previewSection.classList.remove('hidden');
-                previewSection.classList.add('flex');
-                updatePreview();
-            }
-        }
-
-        // Theme Switcher
-        function toggleTheme() {
-            if (document.documentElement.classList.contains('dark')) {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('editor_theme', 'light');
-            } else {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('editor_theme', 'dark');
-            }
-        }
-
-        // Symbol Insertion
-        function insertSymbol(openSymbol, closeSymbol = '') {
-            const start = editor.selectionStart;
-            const end = editor.selectionEnd;
-            const text = editor.value;
-            const selectedText = text.substring(start, end);
-
-            const inserted = openSymbol + selectedText + closeSymbol;
-            editor.value = text.substring(0, start) + inserted + text.substring(end);
-            editor.focus();
-
-            const newPos = start + openSymbol.length + selectedText.length;
-            editor.setSelectionRange(newPos, newPos);
-
-            updateEditorLines();
-            debouncePreview();
-            markUnsaved();
-            saveToLocalStorage();
-        }
-
-        function insertHTML5Boilerplate() {
-            if (editor.value.trim().length > 0 && !confirm('Replace current editor text with HTML boilerplate?')) return;
-            editor.value = htmlBoilerplate;
-            filenameInput.value = 'index.html';
-            syncExtensionWithFilename();
-            updateEditorLines();
-            updatePreview();
-            markUnsaved();
-            saveToLocalStorage();
-            showToast('HTML Boilerplate Inserted');
-        }
-
-        function createNewFile() {
-            if (isModified && !confirm('Discard unsaved changes?')) return;
-            editor.value = '';
-            filenameInput.value = 'untitled.txt';
-            syncExtensionWithFilename();
-            updateEditorLines();
-            updatePreview();
-            markSaved();
-            saveToLocalStorage();
-            showToast('New blank file created');
-        }
-
-        function openFile() {
-            document.getElementById('file-input').click();
-        }
-
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
+        // Open Local File
+        document.getElementById('file-input').addEventListener('change', (e) => {
+            const file = e.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = (e) => {
                 editor.value = e.target.result;
-                filenameInput.value = file.name;
-                syncExtensionWithFilename();
-                updateEditorLines();
-                updatePreview();
-                markSaved();
-                saveToLocalStorage();
+                updateLineNumbers();
+                updateCursor();
                 showToast(`Opened ${file.name}`);
             };
             reader.readAsText(file);
-        }
-
-        // Clean Direct Download File Saving Mechanics
-        function saveFile() {
-            const content = editor.value;
-            let rawFilename = filenameInput.value.trim() || 'untitled';
-            const selectedExt = formatSelector.value;
-
-            // Enforce clean extension alignment
-            let baseName = rawFilename.replace(/\.[^/.]+$/, "");
-            if (!baseName) baseName = "untitled";
-            const finalFilename = `${baseName}.${selectedExt}`;
-            filenameInput.value = finalFilename;
-
-            const mimeTypes = {
-                'html': 'text/html;charset=utf-8',
-                'txt': 'text/plain;charset=utf-8',
-                'css': 'text/css;charset=utf-8',
-                'js': 'application/javascript;charset=utf-8',
-                'json': 'application/json;charset=utf-8'
-            };
-            const mimeType = mimeTypes[selectedExt] || 'text/plain;charset=utf-8';
-
-            // Direct blob download
-            try {
-                const blob = new Blob([content], { type: mimeType });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.style.display = 'none';
-                a.href = url;
-                a.download = finalFilename;
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                // Safely revoke object URL without secondary prompts
-                setTimeout(() => {
-                    URL.revokeObjectURL(url);
-                }, 1500);
-
-                markSaved();
-                showToast(`Saved ${finalFilename}`);
-            } catch (err) {
-                copyToClipboard();
-            }
-        }
-
-        function copyToClipboard() {
-            if (navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(editor.value).then(() => {
-                    showToast('Copied content to clipboard');
-                }).catch(() => fallbackCopy());
-            } else {
-                fallbackCopy();
-            }
-        }
-
-        function fallbackCopy() {
-            editor.select();
-            document.execCommand('copy');
-            showToast('Copied content to clipboard');
-        }
+        });
 
         function saveToLocalStorage() {
-            localStorage.setItem('mobile_editor_code', editor.value);
-            localStorage.setItem('mobile_editor_filename', filenameInput.value);
+            localStorage.setItem('mobile_editor_content', editor.value);
         }
 
-        function showToast(message) {
+        function showToast(msg) {
             const toast = document.getElementById('toast');
-            const toastMessage = document.getElementById('toast-message');
-            toastMessage.textContent = message;
+            toast.innerText = msg;
             toast.classList.remove('opacity-0', 'pointer-events-none');
-
             setTimeout(() => {
                 toast.classList.add('opacity-0', 'pointer-events-none');
             }, 2000);
         }
+
+        // Initialize line numbers on load
+        updateLineNumbers();
     </script>
 </body>
 </html>
