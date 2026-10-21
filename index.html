@@ -326,6 +326,10 @@ svg{display:block}
         <div class="sheet">
             <h2>Saved files</h2>
             <div id="files-list"></div>
+            <div class="lbl" style="margin-top:1rem">Clear data</div>
+            <button id="clear-editor-btn" class="btn">Clear editor text</button>
+            <button id="reset-app-btn" class="btn danger">Delete everything &amp; reset app</button>
+            <p class="hint">"Clear editor text" empties the editor and its automatic draft. "Delete everything" also removes all saved files and settings, empties the app's offline cache, then reloads a fresh copy.</p>
             <button class="btn ghost" data-close="files-modal">Close</button>
         </div>
     </div>
@@ -699,6 +703,59 @@ svg{display:block}
 
         updateLineNumbers();
         updateCursor();
+
+        // ===== Clearing data =====
+        function armConfirm(btn, armedLabel, action) {
+            const original = btn.innerText;
+            btn.addEventListener('click', () => {
+                if (btn.dataset.armed !== '1') {
+                    btn.dataset.armed = '1';
+                    btn.innerText = armedLabel;
+                    setTimeout(() => { btn.dataset.armed = ''; btn.innerText = original; }, 3000);
+                    return;
+                }
+                btn.dataset.armed = '';
+                btn.innerText = original;
+                action();
+            });
+        }
+
+        armConfirm(document.getElementById('clear-editor-btn'), 'Tap again to clear', () => {
+            editor.value = '';
+            currentName = 'document';
+            try { localStorage.removeItem('mobile_editor_content'); } catch (_) {}
+            updateLineNumbers();
+            updateCursor();
+            closeModal('files-modal');
+            showToast('Editor cleared');
+        });
+
+        async function resetEverything() {
+            editor.value = '';
+            try { localStorage.clear(); sessionStorage.clear(); } catch (_) {}
+            try {
+                if (window.indexedDB && indexedDB.databases) {
+                    const dbs = await indexedDB.databases();
+                    dbs.forEach(d => { if (d.name) indexedDB.deleteDatabase(d.name); });
+                }
+            } catch (_) {}
+            try {
+                if (window.caches) {
+                    const keys = await caches.keys();
+                    await Promise.all(keys.map(k => caches.delete(k)));
+                }
+            } catch (_) {}
+            try {
+                if (navigator.serviceWorker) {
+                    const regs = await navigator.serviceWorker.getRegistrations();
+                    await Promise.all(regs.map(r => r.unregister()));
+                }
+            } catch (_) {}
+            showToast('Everything deleted - restarting...');
+            setTimeout(() => location.reload(), 700);
+        }
+
+        armConfirm(document.getElementById('reset-app-btn'), 'Tap again: delete ALL', resetEverything);
 
         // Turn off native pull-to-refresh when running inside a Nativine app (does nothing in a normal browser)
         (function disablePullToRefresh() {
