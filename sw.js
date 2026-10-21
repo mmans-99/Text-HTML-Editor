@@ -1,6 +1,6 @@
 // Service worker: caches the app so it works offline.
 // Change CACHE_NAME (e.g. v2) whenever you upload a new version of the app.
-const CACHE_NAME = 'txt-editor-v2';
+const CACHE_NAME = 'txt-editor-v3';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', (event) => {
