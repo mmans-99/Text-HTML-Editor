@@ -1,6 +1,6 @@
 // Service worker: caches the app so it works offline.
 // Change CACHE_NAME (e.g. v2) whenever you upload a new version of the app.
-const CACHE_NAME = 'txt-editor-v1';
+const CACHE_NAME = 'txt-editor-v2';
 const FILES = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -17,7 +17,14 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Network first (so updates arrive), fall back to the saved copy when offline.
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request).catch(() => caches.match('./index.html')))
+    fetch(event.request)
+      .then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return resp;
+      })
+      .catch(() => caches.match(event.request).then((cached) => cached || caches.match('./index.html')))
   );
 });

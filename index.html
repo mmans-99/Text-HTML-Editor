@@ -141,26 +141,40 @@ svg{display:block}
         .safe-area-bottom {
             padding-bottom: env(safe-area-inset-bottom);
         }
-        /* Unified Grid Scroll Container to prevent WebView desync */
+        /* Editor layout: fixed gutter + scrolling textarea; gutter scroll is synced from JS */
         .editor-grid {
-            display: grid;
-            grid-template-columns: 48px 1fr;
+            display: flex;
             height: 100%;
-            overflow-y: auto;
-            overflow-x: auto;
+            width: 100%;
+            overflow: hidden;
             position: relative;
         }
         #line-numbers {
+            flex: 0 0 3.25rem;
+            width: 3.25rem;
             overflow: hidden;
             pointer-events: none;
             user-select: none;
+            font-size: 14px;
+            line-height: 1.625;
+            padding-top: 0.75rem;
+            padding-bottom: 4rem;
+            white-space: nowrap;
         }
         #editor-textarea {
+            flex: 1 1 0%;
+            min-width: 0;
+            width: auto;
+            height: 100%;
             resize: none;
             outline: none;
             background: transparent;
             white-space: pre;
-            overflow-x: auto;
+            overflow: auto;
+            font-size: 14px;
+            line-height: 1.625;
+            padding: 0.75rem;
+            -webkit-overflow-scrolling: touch;
         }
         /* Custom Scrollbar */
         ::-webkit-scrollbar {
@@ -356,6 +370,7 @@ svg{display:block}
                 nums += i + '<br>';
             }
             lineNumbers.innerHTML = nums;
+            lineNumbers.scrollTop = editor.scrollTop;
         }
 
         function updateCursor() {
@@ -372,6 +387,10 @@ svg{display:block}
             updateLineNumbers();
             updateCursor();
             saveToLocalStorage();
+        });
+
+        editor.addEventListener('scroll', () => {
+            lineNumbers.scrollTop = editor.scrollTop;
         });
 
         editor.addEventListener('click', updateCursor);
